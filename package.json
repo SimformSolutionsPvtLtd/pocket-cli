@@ -1,0 +1,72 @@
+{
+  "name": "pocket-cli",
+  "version": "1.0.0",
+  "description": "Pocket Deploy command-line utility",
+  "homepage": "https://github.com/SimformSolutionsPvtLtd/pocket-cli/#readme",
+  "author": "Simform Solutions",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SimformSolutionsPvtLtd/pocket-cli/"
+  },
+  "bin": {
+    "pocket": "./dist/distribute.js"
+  },
+  "keywords": [
+    "distribute",
+    "CLI"
+  ],
+  "license": "MIT",
+  "files": [
+    "/dist"
+  ],
+  "dependencies": {
+    "@plist/parse": "1.1.0",
+    "axios": "^1.7.9",
+    "bplist-parser": "0.3.2",
+    "build-info-parser": "1.0.0",
+    "bytebuffer": "5.0.1",
+    "cgbi-to-png": "1.0.7",
+    "form-data": "^4.0.1",
+    "isomorphic-unzip": "1.1.5",
+    "jsonwebtoken": "9.0.2",
+    "save": "^2.4.0",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^16.1.0",
+    "@commitlint/config-conventional": "^16.0.0",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^15.6.1",
+    "@types/q": "^1.5.4",
+    "@typescript-eslint/eslint-plugin": "^5.29.0",
+    "@typescript-eslint/parser": "^5.29.0",
+    "eslint": "^7.32.0",
+    "eslint-plugin-simple-import-sort": "^7.0.0",
+    "husky": "^8.0.1",
+    "lint-staged": "^11.1.2",
+    "prettier": "^2.7.1",
+    "sync-request": "^6.1.0",
+    "typescript": "^5.7.2"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "yarn build && yarn test"
+    }
+  },
+  "lint-staged": {
+    "src/**/*.{js,ts}": [
+      "eslint"
+    ]
+  },
+  "eslintIgnore": [
+    "node_modules/",
+    "lib/"
+  ],
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  }
+}
