@@ -11,6 +11,9 @@
   "bin": {
     "pocket": "./dist/distribute.js"
   },
+  "scripts": {
+    "build": "rm -rf dist && tsc"
+  },
   "keywords": [
     "distribute",
     "CLI"
