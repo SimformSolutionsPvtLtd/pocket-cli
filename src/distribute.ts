@@ -28,7 +28,7 @@ yargs(hideBin(process.argv))
       },
       baseUrl: {
         type: 'string',
-        demandOption: true,
+        demandOption: false,
         describe: 'The base URL of the server.'
       },
       releaseNotes: {
@@ -37,7 +37,7 @@ yargs(hideBin(process.argv))
         describe: 'Enter your Release Notes for this version.'
       }
     },
-    async (argv) => {
+    async argv => {
       await deployApp(
         argv.applicationId,
         argv.buildPath,

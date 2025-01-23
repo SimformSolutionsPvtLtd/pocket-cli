@@ -5,6 +5,8 @@ import FormData from 'form-data';
 import ApiConst from './ApiConst';
 import AppConst from './AppConst';
 import { getApkName } from './CommonUtils';
+import jwt from 'jsonwebtoken';
+import { DecodedToken } from './types/CommonTypes';
 
 const FileType = {
   Apk: 'apk',
@@ -83,7 +85,7 @@ const deployApp = async (
   applicationId: string,
   buildPath: string,
   appToken: any,
-  baseUrl: string,
+  baseUrl?: string,
   releaseNotes?: string
 ) => {
   // Use applicationId and buildPath in your deployment logic
@@ -102,11 +104,15 @@ const deployApp = async (
     console.error('App token is missing');
     process.exit(1);
   }
-  if (!baseUrl) {
+
+  const decodedToken = jwt.decode(appToken) as DecodedToken;
+  const decodedBaseUrl = decodedToken?.baseUrl;
+  const currentUrl = baseUrl || decodedBaseUrl;
+
+  if (!currentUrl) {
     console.error('Base URL is missing');
     process.exit(1);
   }
-
   const fileType = buildPath?.split('.')?.pop() ?? FileType.Apk;
 
   const currentFileContentType =
@@ -132,7 +138,7 @@ const deployApp = async (
 
     formData.append('appToken', appToken);
     formData.append('currentFileContentType', currentFileContentType);
-    formData.append('baseUrl', baseUrl);
+    formData.append('baseUrl', currentUrl);
     formData.append('applicationId', applicationId);
     formData.append('buildInfo', JSON.stringify(buildInfo));
 
@@ -154,7 +160,7 @@ const deployApp = async (
 
     console.log('deployAppToPocketDeploy');
     const response = await axios.post(
-      `${baseUrl}${ApiConst.deployAppToPocketDeploy}`,
+      `${currentUrl}/${ApiConst.deployAppToPocketDeploy}`,
       formData,
       {
         headers: {

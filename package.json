@@ -23,16 +23,10 @@
     "/dist"
   ],
   "dependencies": {
-    "@plist/parse": "1.1.0",
     "axios": "^1.7.9",
-    "bplist-parser": "0.3.2",
     "build-info-parser": "1.0.0",
-    "bytebuffer": "5.0.1",
-    "cgbi-to-png": "1.0.7",
     "form-data": "^4.0.1",
-    "isomorphic-unzip": "1.1.5",
     "jsonwebtoken": "9.0.2",
-    "save": "^2.4.0",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
