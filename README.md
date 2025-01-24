@@ -11,13 +11,13 @@ npm install -g simform-pocket-cli
 ## Distribution
 
 ```bash
-pocket distribute --applicationId "yourApplicationID" --buildPath "yourBuildPath" --appToken "YourAppToken" --baseUrl "base url of the server" --releaseNotes "formatted release notes"
+pocket distribute --applicationId "yourApplicationID" --buildPath "yourBuildPath" --appToken "YourAppToken" --releaseNotes "formatted release notes"
 ```
 
 ## Example
 
 ```bash
-pocket distribute --applicationId "<yourApplicationId>" --buildPath "<yourPath>/Downloads/app-release.apk" --appToken "<yourAppToken>" --baseUrl "<yourBaseUrl>/functions/v1/" --releaseNotes "formatted release notes"
+pocket distribute --applicationId "<yourApplicationId>" --buildPath "<yourPath>/Downloads/app-release.apk" --appToken "<yourAppToken>" --releaseNotes "formatted release notes"
 ```
 
 ## How to get Application ID and App Token

@@ -5,16 +5,13 @@ import FormData from 'form-data';
 import ApiConst from './ApiConst';
 import AppConst from './AppConst';
 import { getApkName } from './CommonUtils';
-
-const FileType = {
-  Apk: 'apk',
-  Ipa: 'ipa'
-};
-
-const FileContentType = {
-  Ipa: 'application/octet-stream',
-  Apk: 'application/vnd.android.package-archive'
-};
+import jwt from 'jsonwebtoken';
+import {
+  AppPlatform,
+  DecodedToken,
+  FileContentType,
+  FileType
+} from './types/CommonTypes';
 
 /**
  * Extract the build data from the file
@@ -83,7 +80,7 @@ const deployApp = async (
   applicationId: string,
   buildPath: string,
   appToken: any,
-  baseUrl: string,
+  baseUrl?: string,
   releaseNotes?: string
 ) => {
   // Use applicationId and buildPath in your deployment logic
@@ -102,11 +99,23 @@ const deployApp = async (
     console.error('App token is missing');
     process.exit(1);
   }
-  if (!baseUrl) {
-    console.error('Base URL is missing');
+
+  const decodedToken = jwt.decode(appToken) as DecodedToken;
+
+  const decodedApplicationId = decodedToken ? decodedToken.app : '';
+
+  if (applicationId !== decodedApplicationId) {
+    console.error('Application ID does not match the application token.');
     process.exit(1);
   }
 
+  const decodedBaseUrl = decodedToken?.baseUrl;
+  const currentUrl = baseUrl || decodedBaseUrl;
+
+  if (!currentUrl) {
+    console.error('Base URL is missing');
+    process.exit(1);
+  }
   const fileType = buildPath?.split('.')?.pop() ?? FileType.Apk;
 
   const currentFileContentType =
@@ -114,61 +123,103 @@ const deployApp = async (
 
   const fileBuffer = fs.readFileSync(buildPath);
 
-  const formData = new FormData();
+  const chunkSize = AppConst.chunkSize * 1024 * 1024; // 100MB
+
+  const fileSize = fs.statSync(buildPath).size;
+
+  const totalChunks = Math.ceil(fileSize / chunkSize);
+
+  const fileStream = fs.createReadStream(buildPath, {
+    highWaterMark: chunkSize
+  });
+
+  let chunkNumber = 1;
 
   const blobData = new Blob([fileBuffer], {
     type: currentFileContentType
   });
 
-  if (blobData?.size > AppConst.maximumFileSize * 1024 * 1024) {
-    throw new Error(
-      `File size exceeds the allowed limit of ${AppConst.maximumFileSize} MB.`
-    );
-  }
-
   try {
     console.log('Processing build...');
     const buildInfo = await fileDataExtract(buildPath, fileType, blobData);
 
-    formData.append('appToken', appToken);
-    formData.append('currentFileContentType', currentFileContentType);
-    formData.append('baseUrl', baseUrl);
-    formData.append('applicationId', applicationId);
-    formData.append('buildInfo', JSON.stringify(buildInfo));
-
-    if (releaseNotes) {
-      releaseNotes = `<pre>${releaseNotes}</pre>`;
-      formData.append('releaseNotes', releaseNotes);
-    }
-
-    const fileStream = fs.createReadStream(buildPath);
-
-    fileStream.on('error', err => {
-      console.error('Error reading the file:', err);
-    });
-
-    formData.append('file', fileStream, {
-      contentType: currentFileContentType,
-      filename: `${AppConst.appDefaultName}.${fileType}`
-    });
-
-    console.log('deployAppToPocketDeploy');
-    const response = await axios.post(
-      `${baseUrl}${ApiConst.deployAppToPocketDeploy}`,
-      formData,
+    // Check if the build already exists
+    const buildExistResponse = await axios.post(
+      `${currentUrl}/${ApiConst.buildsExist}`,
+      {
+        application_id: applicationId,
+        version_code: buildInfo.versionCode?.toString(),
+        version_name: buildInfo.versionName?.toString(),
+        platform:
+          buildInfo.fileType === FileType.Ipa
+            ? AppPlatform.IOS
+            : AppPlatform.Android
+      },
       {
         headers: {
-          ...formData.getHeaders(),
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${appToken}`
         }
       }
     );
 
+    if (buildExistResponse.status === 409) {
+      return buildExistResponse;
+    }
+
+    for await (const chunk of fileStream) {
+      const formData = new FormData();
+
+      formData.append('applicationId', applicationId);
+      formData.append('buildInfo', JSON.stringify(buildInfo));
+      formData.append('currentFileContentType', currentFileContentType);
+      formData.append('baseUrl', currentUrl);
+      formData.append('appToken', appToken);
+
+      if (releaseNotes) {
+        formData.append('releaseNotes', `<pre>${releaseNotes}</pre>`);
+      }
+
+      fileStream.on('error', err => {
+        console.error('Error reading the file:', err);
+      });
+      // Add current chunk
+      formData.append('file', chunk, {
+        contentType: currentFileContentType,
+        filename: `chunk-${chunkNumber}`
+      });
+
+      // Add chunk metadata
+      formData.append('chunkNumber', chunkNumber);
+      formData.append('totalChunks', totalChunks);
+
+      const response = await axios.post(
+        `${currentUrl}/${ApiConst.deployAppToPocketDeploy}`,
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+            Authorization: `Bearer ${appToken}`
+          }
+        }
+      );
+
+      if (response.status === 200) {
+        const percentage = Math.floor((chunkNumber / totalChunks) * 100);
+        console.log(`Upload Progress: ${percentage}%`);
+
+        // Increment the chunk number
+        chunkNumber++;
+      } else {
+        throw new Error(`Failed to upload build`);
+      }
+    }
+
     console.log('Build Uploaded successfully');
-    return response;
+    return;
   } catch (error) {
     console.error(
-      'Error during post-build process:',
+      'Error during uploading the build:',
       error.response?.data ?? error
     );
   }

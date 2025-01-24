@@ -3,5 +3,5 @@ export default {
   appDefaultPackage: 'com.default',
   appDefaultVersion: '1.0',
   appDefaultVersionCode: 1,
-  maximumFileSize: 100 // 100MB
+  chunkSize: 100 // In Bytes
 };
